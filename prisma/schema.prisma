@@ -11,7 +11,7 @@ datasource db {
     // Further reading:
     // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
     // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-    url      = env("POSTGRES_URL")
+    url      = env("POSTGRES_URL_NON_POOLING")
 }
 
 model Post {
@@ -71,4 +71,30 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model Website {
+    id                       String    @id @default(cuid())
+    url                      String    @unique // The URL of the site to be migrated
+    ownerName                String? // Name of the website owner
+    ownerEmail               String? // Email of the website owner
+    currentServer            String // e.g., "Dept2"
+    targetServer             String // e.g., "cPanel"
+    migrationStatus          String    @default("Pending Outreach") // Tracks the progress
+    lastOutreachDate         DateTime? // When you last contacted them
+    lastManualReplyCheckDate DateTime? // When you last checked for a reply
+    notes                    String?   @db.Text // Any relevant notes
+    createdAt                DateTime  @default(now())
+    updatedAt                DateTime  @updatedAt
+
+    communicationLogs CommunicationLog[] // Links to communication history
+}
+
+model CommunicationLog {
+    id        String   @id @default(cuid())
+    message   String   @db.Text
+    type      String // e.g., "email", "phone", "note"
+    createdAt DateTime @default(now())
+    website   Website  @relation(fields: [websiteId], references: [id])
+    websiteId String
 }
