@@ -11,12 +11,9 @@ const WebsitesIndexPage: NextPage = () => {
     // const router = useRouter();
     const { data: session, status: sessionStatus } = useSession();
     const { data: websites, isLoading, error } = api.website.getAll.useQuery(
-        undefined, // No input needed for getAll
+        undefined,
         {
             enabled: sessionStatus === "authenticated", // Only run query if user is authenticated
-            refetchOnWindowFocus: false, // Optional: disable refetching on window focus
-            refetchOnReconnect: false, // Optional: disable refetching on reconnect
-            refetchOnMount: false, // Optional: disable refetching on mount
         }
     );
 
@@ -25,7 +22,7 @@ const WebsitesIndexPage: NextPage = () => {
         return <p>Loading session...</p>;
     }
     if (status === "unauthenticated") {
-        // void router.push("/api/auth/signin"); // Or your login page
+        // void router.push("/api/auth/signin");
         return <p>Access Denied. Please sign in.</p>;
     }
 
@@ -43,7 +40,7 @@ const WebsitesIndexPage: NextPage = () => {
             </Head>
             <main className="container mx-auto flex min-h-screen flex-col p-4">
                 <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-3xl font-bold">Migration Websites</h1>
+                    <h1 className="text-3xl font-bold text-white">Migration Websites</h1>
                     <Link href="/websites/new" legacyBehavior>
                         <a className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                             Add New Website
@@ -76,7 +73,6 @@ const WebsitesIndexPage: NextPage = () => {
                                             <Link href={`/websites/${website.id}`} legacyBehavior>
                                                 <a className="text-indigo-600 hover:text-indigo-900">View/Edit</a>
                                             </Link>
-                                            {/* TODO: Add Delete button here later */}
                                         </td>
                                     </tr>
                                 ))}

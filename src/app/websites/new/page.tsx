@@ -4,7 +4,7 @@ import type { NextPage } from "next";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
-import { useForm, type SubmitHandler, type FieldErrors } from "react-hook-form"; // Use SubmitHandler
+import { useForm, type SubmitHandler } from "react-hook-form"; // Use SubmitHandler
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
 import type { TRPCClientErrorLike } from "@trpc/client";
@@ -88,7 +88,7 @@ const NewWebsitePage: NextPage = () => {
                 >
                     <div>
                         <label
-                            htmlFor="url" // CORRECTED: Use htmlFor
+                            htmlFor="url"
                             className="block text-sm font-medium text-gray-700"
                         >
                             URL
@@ -105,7 +105,6 @@ const NewWebsitePage: NextPage = () => {
                             </p>
                         )}
                     </div>
-                    {/* ... other form fields ... */}
                     <div>
                         <label
                             htmlFor="ownerName"
