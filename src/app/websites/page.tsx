@@ -1,11 +1,94 @@
-const WebsitesIndexPage = () => {
-    return (
-        <div>
-            <h1>Websites</h1>
-            <p>This is the index page for managing websites.</p>
-            {/* Add your components for listing and managing websites here */}
-        </div>
+// src/pages/websites/index.tsx
+"use client";
+
+import { type NextPage } from "next";
+import Head from "next/head";
+import Link from "next/link";
+import { api } from "~/trpc/react";
+import { useSession } from "next-auth/react";
+
+const WebsitesIndexPage: NextPage = () => {
+    // const router = useRouter();
+    const { data: session, status: sessionStatus } = useSession();
+    const { data: websites, isLoading, error } = api.website.getAll.useQuery(
+        undefined, // No input needed for getAll
+        {
+            enabled: sessionStatus === "authenticated", // Only run query if user is authenticated
+            refetchOnWindowFocus: false, // Optional: disable refetching on window focus
+            refetchOnReconnect: false, // Optional: disable refetching on reconnect
+            refetchOnMount: false, // Optional: disable refetching on mount
+        }
     );
-}
+
+    // Route protection
+    if (status === "loading") {
+        return <p>Loading session...</p>;
+    }
+    if (status === "unauthenticated") {
+        // void router.push("/api/auth/signin"); // Or your login page
+        return <p>Access Denied. Please sign in.</p>;
+    }
+
+    if (isLoading && status === "authenticated") {
+        return <p>Loading websites...</p>;
+    }
+    if (error) {
+        return <p>Error loading websites: {error.message}</p>;
+    }
+
+    return (
+        <>
+            <Head>
+                <title>Migration Websites</title>
+            </Head>
+            <main className="container mx-auto flex min-h-screen flex-col p-4">
+                <div className="mb-6 flex items-center justify-between">
+                    <h1 className="text-3xl font-bold">Migration Websites</h1>
+                    <Link href="/websites/new" legacyBehavior>
+                        <a className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                            Add New Website
+                        </a>
+                    </Link>
+                </div>
+
+                {websites && websites.length > 0 ? (
+                    <div className="overflow-x-auto shadow-md sm:rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-200 bg-white">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">URL</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Owner</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Current Server</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Target Server</th>
+                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {websites.map((website) => (
+                                    <tr key={website.id}>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{website.url}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.ownerName || "-"} ({website.ownerEmail || "-"})</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.migrationStatus}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.currentServer}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.targetServer}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                                            <Link href={`/websites/${website.id}`} legacyBehavior>
+                                                <a className="text-indigo-600 hover:text-indigo-900">View/Edit</a>
+                                            </Link>
+                                            {/* TODO: Add Delete button here later */}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p>No websites added yet. <Link href="/websites/new" className="text-indigo-600 hover:text-indigo-800">Add one now!</Link></p>
+                )}
+            </main>
+        </>
+    );
+};
 
 export default WebsitesIndexPage;
