@@ -71,10 +71,15 @@ const NewWebsitePage: NextPage = () => {
     if (sessionStatus === "loading") {
         return <div>Loading...</div>;
     }
-
     if (!session) {
         return <p>Please sign in to add a new website.</p>;
     }
+
+    const migrationStatuses = [
+        "Pending Outreach", "Outreach Sent", "Awaiting Reply",
+        "Reply Received", "Scheduled", "Migration In Progress",
+        "Complete", "Issue - Contact Failed", "Issue - Technical"
+    ];
 
     return (
         <>
@@ -193,20 +198,9 @@ const NewWebsitePage: NextPage = () => {
                             {...register("migrationStatus")}
                             className="mt-1 block w-full rounded-md border-b-2 border-gray-600 shadow-sm focus:border-indigo-500"
                         >
-                            <option value="">-- Select Status --</option>
-                            <option value="pending_outreach">Pending Outreach</option>
-                            <option value="outreach_sent">Outreach Sent</option>
-                            <option value="awaiting_reply">Awaiting Reply</option>
-                            <option value="reply_received">Reply Received</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="migration_in_progress">
-                                Migration In Progress
-                            </option>
-                            <option value="complete">Complete</option>
-                            <option value="issue_contact_failed">
-                                Issue - Contact Failed
-                            </option>
-                            <option value="issue_technical">Issue - Technical</option>
+                            {migrationStatuses.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
                         </select>
                         {errors.migrationStatus?.message && (
                             <p className="mt-1 text-xs text-red-500">

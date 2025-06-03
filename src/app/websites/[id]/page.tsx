@@ -1,7 +1,8 @@
 "use client";
+
 import { type NextPage } from "next";
 import Head from "next/head";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,7 +24,8 @@ type WebsiteFormValues = z.infer<typeof websiteFormSchema>;
 
 const EditWebsitePage: NextPage = () => {
     const router = useRouter();
-    const websiteId = router.query.id as string; // Get ID from URL
+    const params = useParams();
+    const websiteId = params.id as string;
     const { data: session, status } = useSession();
 
     const {
@@ -39,21 +41,22 @@ const EditWebsitePage: NextPage = () => {
     const { data: websiteData, isLoading: isLoadingWebsite } = api.website.getById.useQuery(
         { id: websiteId },
         {
-            enabled: !!websiteId && status === "authenticated", // Only fetch if ID is present and authenticated
-            onSuccess: (data) => {
-                if (data) {
-                    // Pre-fill the form with fetched data
-                    setValue("url", data.url);
-                    setValue("ownerName", data.ownerName || "");
-                    setValue("ownerEmail", data.ownerEmail || "");
-                    setValue("currentServer", data.currentServer);
-                    setValue("targetServer", data.targetServer);
-                    setValue("migrationStatus", data.migrationStatus);
-                    setValue("notes", data.notes || "");
-                }
-            },
+            enabled: !!websiteId && status === "authenticated",
         }
     );
+
+    useEffect(() => {
+        if (websiteData) {
+            // Pre-fill the form with fetched data
+            setValue("url", websiteData.url);
+            setValue("ownerName", websiteData.ownerName || "");
+            setValue("ownerEmail", websiteData.ownerEmail || "");
+            setValue("currentServer", websiteData.currentServer);
+            setValue("targetServer", websiteData.targetServer);
+            setValue("migrationStatus", websiteData.migrationStatus);
+            setValue("notes", websiteData.notes || "");
+        }
+    }, [websiteData, setValue]);
 
     const updateWebsite = api.website.update.useMutation({
         onSuccess: () => {
@@ -70,14 +73,32 @@ const EditWebsitePage: NextPage = () => {
         updateWebsite.mutate({ id: websiteId, ...data });
     };
 
+    const deleteWebsite = api.website.delete.useMutation({
+        onSuccess: () => {
+            console.log("Website deleted successfully!");
+            void router.push("/websites"); // Redirect to list page
+        },
+        onError: (error) => {
+            console.error("Failed to delete website:", error);
+            alert(`Error: ${error.message}`);
+        },
+    });
+    const handleDelete = () => {
+        if (
+            window.confirm(
+                "Are you sure you want to delete this website? This action cannot be undone.",
+            )
+        ) {
+            deleteWebsite.mutate({ id: websiteId });
+        }
+    }
+
     // Route protection
     if (status === "loading") return <p>Loading session...</p>;
     if (status === "unauthenticated") return <p>Access Denied. Please sign in.</p>;
     if (isLoadingWebsite && status === "authenticated") return <p>Loading website data...</p>;
     if (!websiteData && !isLoadingWebsite && status === "authenticated") return <p>Website not found.</p>;
 
-
-    // Example migration statuses - you might fetch these from somewhere or define them statically
     const migrationStatuses = [
         "Pending Outreach", "Outreach Sent", "Awaiting Reply",
         "Reply Received", "Scheduled", "Migration In Progress",
@@ -90,17 +111,15 @@ const EditWebsitePage: NextPage = () => {
                 <title>Edit Migration Website</title>
             </Head>
             <main className="container mx-auto flex min-h-screen flex-col items-center p-4">
-                <h1 className="mb-6 text-3xl font-bold">Edit Migration Website</h1>
+                <h1 className="mb-6 text-3xl font-bold text-white">Edit Migration Website</h1>
                 {websiteData && (
                     <form
                         onSubmit={handleSubmit(onSubmit)}
                         className="w-full max-w-lg space-y-4 rounded bg-white p-8 shadow-md"
                     >
-                        {/* Form fields are similar to new.tsx, but pre-filled */}
-                        {/* URL (usually not editable, or handle with care if it is) */}
                         <div>
                             <label htmlFor="url" className="block text-sm font-medium text-gray-700">URL</label>
-                            <input id="url" {...register("url")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" readOnly />
+                            <input id="url" {...register("url")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             {errors.url && <p className="mt-1 text-xs text-red-500">{errors.url.message}</p>}
                         </div>
 
@@ -159,7 +178,14 @@ const EditWebsitePage: NextPage = () => {
                         >
                             {updateWebsite.isLoading ? "Updating..." : "Update Website"}
                         </button>
-                        {/* TODO: Add Delete button here later */}
+                        <button
+                            type="button" // Important: type="button" to prevent form submission
+                            onClick={handleDelete}
+                            disabled={deleteWebsite.isPending}
+                            className="flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50"
+                        >
+                            {deleteWebsite.isPending ? "Deleting..." : "Delete Website"}
+                        </button>
                     </form>
                 )}
             </main>
