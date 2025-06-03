@@ -14,6 +14,7 @@ export const websiteRouter = createTRPCRouter({
             currentServer: z.string(),
             targetServer: z.string(),
             notes: z.string().optional(),
+            migrationStatus: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             return ctx.db.website.create({
@@ -24,6 +25,7 @@ export const websiteRouter = createTRPCRouter({
                     currentServer: input.currentServer,
                     targetServer: input.targetServer,
                     notes: input.notes,
+                    migrationStatus: input.migrationStatus,
                 },
             });
         }),
@@ -51,6 +53,7 @@ export const websiteRouter = createTRPCRouter({
             currentServer: z.string(),
             targetServer: z.string(),
             notes: z.string().optional(),
+            migrationStatus: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             return ctx.db.website.update({
@@ -62,7 +65,17 @@ export const websiteRouter = createTRPCRouter({
                     currentServer: input.currentServer,
                     targetServer: input.targetServer,
                     notes: input.notes,
+                    migrationStatus: input.migrationStatus,
                 },
+            });
+        }
+        ),
+
+    delete: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            return ctx.db.website.delete({
+                where: { id: input.id },
             });
         }
         ),
