@@ -93,15 +93,15 @@ const EditWebsitePage: NextPage = () => {
     useEffect(() => {
         if (websiteData) {
             setValue("url", websiteData.url);
-            setValue("ownerName", websiteData.ownerName || "");
-            setValue("ownerEmail", websiteData.ownerEmail || "");
+            setValue("ownerName", websiteData.ownerName ?? "");
+            setValue("ownerEmail", websiteData.ownerEmail ?? "");
             setValue("currentServer", websiteData.currentServer);
             setValue("targetServer", websiteData.targetServer);
             setValue(
                 "migrationStatus",
-                websiteData.migrationStatus || "Pending Outreach",
+                websiteData.migrationStatus ?? "Pending Outreach",
             );
-            setValue("notes", websiteData.notes || "");
+            setValue("notes", websiteData.notes ?? "");
         }
     }, [websiteData, setValue]);
 
@@ -206,7 +206,7 @@ const EditWebsitePage: NextPage = () => {
     return (
         <>
             <Head>
-                <title>Edit Migration Website - {websiteData?.url || "Loading..."}</title>
+                <title>Edit Migration Website - {websiteData?.url ?? "Loading..."}</title>
             </Head>
             <main className="container mx-auto flex min-h-screen flex-col items-center p-4">
                 <h1 className="mb-6 text-3xl font-bold text-white">
@@ -355,7 +355,7 @@ const EditWebsitePage: NextPage = () => {
                                         <p className="whitespace-pre-wrap text-gray-700">{log.message}</p>
                                         {log.user && (
                                             <p className="mt-2 text-right text-xs text-gray-500">
-                                                Logged by: {log.user.name || "Unknown User"}
+                                                Logged by: {log.user.name ?? "Unknown User"}
                                             </p>
                                         )}
                                     </li>
