@@ -7,7 +7,7 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "~/trpc/react";
-import { useEffect } from "react"; // To set form values
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "~/server/api/root";
@@ -15,20 +15,22 @@ import type { AppRouter } from "~/server/api/root";
 const websiteFormSchema = z.object({
     url: z.string().url({ message: "Must be a valid URL" }),
     ownerName: z.string().optional(),
-    ownerEmail: z.string().email({ message: "Must be a valid email" }).optional().or(z.literal('')),
+    ownerEmail: z
+        .string()
+        .email({ message: "Must be a valid email" })
+        .optional()
+        .or(z.literal("")),
     currentServer: z.string().min(1, { message: "Current server is required" }),
     targetServer: z.string().min(1, { message: "Target server is required" }),
-    migrationStatus: z.string().min(1, { message: "Status is required" }), // Added status
+    migrationStatus: z.string().min(1, { message: "Status is required" }),
     notes: z.string().optional(),
 });
-
 type WebsiteFormValues = z.infer<typeof websiteFormSchema>;
 
 const commLogFormSchema = z.object({
     message: z.string().min(1, { message: "Message cannot be empty" }),
     type: z.enum(["email", "chat"]),
 });
-
 type CommLogFormValues = z.infer<typeof commLogFormSchema>;
 
 const EditWebsitePage: NextPage = () => {
@@ -37,96 +39,18 @@ const EditWebsitePage: NextPage = () => {
     const websiteId = params.id as string;
     const { data: session, status } = useSession();
 
+    // Hooks for the main website form
     const {
         register,
         handleSubmit,
         formState: { errors },
-        reset, // To pre-fill the form
-        setValue, // To pre-fill the form
+        reset: resetWebsiteForm,
+        setValue,
     } = useForm<WebsiteFormValues>({
         resolver: zodResolver(websiteFormSchema),
     });
 
-    const {
-        data: commLogs,
-        isLoading: isLoadingCommLogs,
-        isError: isCommLogsError,
-        error: commLogsError,
-        refetch: refetchCommLogs,
-    } = api.communicationLog.getByWebsiteId.useQuery(
-        { websiteId },
-        {
-            enabled: !!websiteId && status === "authenticated",
-        });
-
-    const { data: websiteData, isLoading: isLoadingWebsite } = api.website.getById.useQuery(
-        { id: websiteId },
-        {
-            enabled: !!websiteId && status === "authenticated",
-        }
-    );
-
-    useEffect(() => {
-        if (websiteData) {
-            // Pre-fill the form with fetched data
-            setValue("url", websiteData.url);
-            setValue("ownerName", websiteData.ownerName || "");
-            setValue("ownerEmail", websiteData.ownerEmail || "");
-            setValue("currentServer", websiteData.currentServer);
-            setValue("targetServer", websiteData.targetServer);
-            setValue("migrationStatus", websiteData.migrationStatus);
-            setValue("notes", websiteData.notes || "");
-        }
-    }, [websiteData, setValue]);
-
-    const updateWebsite = api.website.update.useMutation({
-        onSuccess: () => {
-            console.log("Website updated successfully!");
-            void router.push("/websites"); // Redirect to list page
-        },
-        onError: (error) => {
-            console.error("Failed to update website:", error);
-            alert(`Error: ${error.message}`);
-        },
-    });
-
-    const onSubmit: SubmitHandler<WebsiteFormValues> = (data) => {
-        updateWebsite.mutate({ id: websiteId, ...data });
-    };
-
-    const deleteWebsite = api.website.delete.useMutation({
-        onSuccess: () => {
-            console.log("Website deleted successfully!");
-            void router.push("/websites"); // Redirect to list page
-        },
-        onError: (error) => {
-            console.error("Failed to delete website:", error);
-            alert(`Error: ${error.message}`);
-        },
-    });
-    const handleDelete = () => {
-        if (
-            window.confirm(
-                "Are you sure you want to delete this website? This action cannot be undone.",
-            )
-        ) {
-            deleteWebsite.mutate({ id: websiteId });
-        }
-    }
-
-    // Route protection
-    if (status === "loading") return <p>Loading session...</p>;
-    if (status === "unauthenticated") return <p>Access Denied. Please sign in.</p>;
-    if (isLoadingWebsite && status === "authenticated") return <p>Loading website data...</p>;
-    if (!websiteData && !isLoadingWebsite && status === "authenticated") return <p>Website not found.</p>;
-
-    const migrationStatuses = [
-        "Pending Outreach", "Outreach Sent", "Awaiting Reply",
-        "Reply Received", "Scheduled", "Migration In Progress",
-        "Complete", "Issue - Contact Failed", "Issue - Technical"
-    ];
-
-    // Communication Log Form
+    // Hooks for communication logs form
     const {
         register: registerCommLog,
         handleSubmit: handleSubmitCommLog,
@@ -135,73 +59,198 @@ const EditWebsitePage: NextPage = () => {
     } = useForm<CommLogFormValues>({
         resolver: zodResolver(commLogFormSchema),
         defaultValues: {
-            type: "email", // Default type
+            type: "email",
             message: "",
+        },
+    });
+
+    // tRPC Queries
+    const {
+        data: websiteData,
+        isLoading: isLoadingWebsite,
+        isError: isErrorLoadingWebsite, // Added for completeness
+        error: websiteLoadingError, // Added for completeness
+    } = api.website.getById.useQuery(
+        { id: websiteId },
+        {
+            enabled: !!websiteId && status === "authenticated",
+        },
+    );
+
+    const {
+        data: commLogs,
+        isLoading: isLoadingCommLogs,
+        isError: isCommLogsError, // Consistent naming
+        error: commLogsLoadingError, // Consistent naming
+        refetch: refetchCommLogs,
+    } = api.communicationLog.getByWebsiteId.useQuery(
+        { websiteId },
+        {
+            enabled: !!websiteId && status === "authenticated",
+        },
+    );
+
+    useEffect(() => {
+        if (websiteData) {
+            setValue("url", websiteData.url);
+            setValue("ownerName", websiteData.ownerName || "");
+            setValue("ownerEmail", websiteData.ownerEmail || "");
+            setValue("currentServer", websiteData.currentServer);
+            setValue("targetServer", websiteData.targetServer);
+            setValue(
+                "migrationStatus",
+                websiteData.migrationStatus || "Pending Outreach",
+            );
+            setValue("notes", websiteData.notes || "");
+        }
+    }, [websiteData, setValue]);
+
+    // tRPC Mutations
+    const updateWebsite = api.website.update.useMutation({
+        onSuccess: () => {
+            console.log("Website updated successfully!");
+            void router.push("/websites");
+        },
+        onError: (error) => {
+            console.error("Failed to update website:", error);
+            alert(`Error: ${error.message}`);
+        },
+    });
+
+    const deleteWebsite = api.website.delete.useMutation({
+        onSuccess: () => {
+            console.log("Website deleted successfully!");
+            resetWebsiteForm(); // Also reset main form if website is deleted
+            void router.push("/websites");
+        },
+        onError: (error) => {
+            console.error("Failed to delete website:", error);
+            alert(`Error: ${error.message}`);
         },
     });
 
     const createCommLog = api.communicationLog.create.useMutation({
         onSuccess: () => {
             console.log("Communication log added successfully!");
-            resetCommLogForm(); // Clear the form
-            void refetchCommLogs(); // Refetch the list of logs to show the new one
+            resetCommLogForm();
+            void refetchCommLogs();
         },
-        onError: (error: TRPCClientErrorLike<AppRouter>) => { // Ensure you have AppRouter imported for TRPCClientErrorLike
+        onError: (error: TRPCClientErrorLike<AppRouter>) => {
             console.error("Failed to add communication log:", error.message);
             alert(`Error adding log: ${error.message}`);
         },
     });
 
-    const onCommLogSubmit: SubmitHandler<CommLogFormValues> = (data) => {
-        createCommLog.mutate({
+    // --- END OF HOOKS SECTION ---
+
+    // Event Handlers (defined after hooks)
+    const onWebsiteSubmit: SubmitHandler<WebsiteFormValues> = (data) => {
+        updateWebsite.mutate({
+            id: websiteId,
             ...data,
-            websiteId: websiteId, // Make sure websiteId is in scope
+            ownerEmail: data.ownerEmail === "" ? undefined : data.ownerEmail,
         });
     };
 
+    const handleDeleteWebsite = () => {
+        if (
+            window.confirm(
+                "Are you sure you want to delete this website? This action cannot be undone.",
+            )
+        ) {
+            deleteWebsite.mutate({ id: websiteId });
+        }
+    };
+
+    const onCommLogSubmit: SubmitHandler<CommLogFormValues> = (data) => {
+        createCommLog.mutate({
+            ...data,
+            websiteId: websiteId,
+        });
+    };
+
+    // Conditional returns for loading/auth states (NOW AFTER ALL HOOKS)
+    if (status === "loading") {
+        return <div className="flex min-h-screen items-center justify-center"><p>Loading session...</p></div>;
+    }
+    if (status === "unauthenticated") {
+        // Consider redirecting or a more robust auth boundary
+        router.push("/api/auth/signin");
+        return <div className="flex min-h-screen items-center justify-center"><p>Redirecting to sign in...</p></div>;
+    }
+    // This check should ideally be after session is confirmed authenticated
+    if (isLoadingWebsite && status === "authenticated") {
+        return <div className="flex min-h-screen items-center justify-center"><p>Loading website data...</p></div>;
+    }
+    // If websiteData is explicitly not found after trying to load
+    if (!websiteData && !isLoadingWebsite && status === "authenticated") {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center p-4">
+                <h1 className="mb-4 text-2xl font-bold text-red-500">Website Not Found</h1>
+                <p className="mb-4 text-gray-700">Could not find website with ID: {websiteId}.</p>
+                <button onClick={() => router.push("/websites")} className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700">
+                    Back to Websites List
+                </button>
+            </div>
+        );
+    }
+
+
+    const migrationStatuses = [
+        "Pending Outreach", "Outreach Sent", "Awaiting Reply",
+        "Reply Received", "Scheduled", "Migration In Progress",
+        "Complete", "Issue - Contact Failed", "Issue - Technical",
+    ];
+
+    // Main component JSX
     return (
         <>
             <Head>
-                <title>Edit Migration Website</title>
+                <title>Edit Migration Website - {websiteData?.url || "Loading..."}</title>
             </Head>
             <main className="container mx-auto flex min-h-screen flex-col items-center p-4">
-                <h1 className="mb-6 text-3xl font-bold text-white">Edit Migration Website</h1>
-                {websiteData && (
+                <h1 className="mb-6 text-3xl font-bold text-white">
+                    Edit Migration Website
+                </h1>
+
+                {/* Main Website Edit Form */}
+                {websiteData && ( // Only render form if websiteData is available
                     <form
-                        onSubmit={handleSubmit(onSubmit)}
-                        className="w-full max-w-lg space-y-4 rounded bg-white p-8 shadow-md"
+                        onSubmit={handleSubmit(onWebsiteSubmit)} // Use the correct submit handler
+                        className="mb-10 w-full max-w-lg space-y-4 rounded bg-slate-200/90 p-8 shadow-xl" // Adjusted styles
                     >
+                        {/* URL */}
                         <div>
                             <label htmlFor="url" className="block text-sm font-medium text-gray-700">URL</label>
-                            <input id="url" {...register("url")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                            {errors.url && <p className="mt-1 text-xs text-red-500">{errors.url.message}</p>}
+                            <input id="url" {...register("url")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            {errors.url && <p className="mt-1 text-xs text-red-600">{errors.url.message}</p>}
                         </div>
 
                         {/* Owner Name */}
                         <div>
                             <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">Owner Name</label>
-                            <input id="ownerName" {...register("ownerName")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            <input id="ownerName" {...register("ownerName")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                         </div>
 
                         {/* Owner Email */}
                         <div>
                             <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700">Owner Email</label>
-                            <input id="ownerEmail" type="email" {...register("ownerEmail")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                            {errors.ownerEmail && <p className="mt-1 text-xs text-red-500">{errors.ownerEmail.message}</p>}
+                            <input id="ownerEmail" type="email" {...register("ownerEmail")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            {errors.ownerEmail && <p className="mt-1 text-xs text-red-600">{errors.ownerEmail.message}</p>}
                         </div>
 
                         {/* Current Server */}
                         <div>
                             <label htmlFor="currentServer" className="block text-sm font-medium text-gray-700">Current Server</label>
-                            <input id="currentServer" {...register("currentServer")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                            {errors.currentServer && <p className="mt-1 text-xs text-red-500">{errors.currentServer.message}</p>}
+                            <input id="currentServer" {...register("currentServer")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            {errors.currentServer && <p className="mt-1 text-xs text-red-600">{errors.currentServer.message}</p>}
                         </div>
 
                         {/* Target Server */}
                         <div>
                             <label htmlFor="targetServer" className="block text-sm font-medium text-gray-700">Target Server</label>
-                            <input id="targetServer" {...register("targetServer")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-                            {errors.targetServer && <p className="mt-1 text-xs text-red-500">{errors.targetServer.message}</p>}
+                            <input id="targetServer" {...register("targetServer")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            {errors.targetServer && <p className="mt-1 text-xs text-red-600">{errors.targetServer.message}</p>}
                         </div>
 
                         {/* Migration Status */}
@@ -210,124 +259,111 @@ const EditWebsitePage: NextPage = () => {
                             <select
                                 id="migrationStatus"
                                 {...register("migrationStatus")}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             >
-                                {migrationStatuses.map(status => (
-                                    <option key={status} value={status}>{status}</option>
+                                {migrationStatuses.map(statusVal => ( // Renamed 'status' to 'statusVal' to avoid conflict
+                                    <option key={statusVal} value={statusVal}>{statusVal}</option>
                                 ))}
                             </select>
-                            {errors.migrationStatus && <p className="mt-1 text-xs text-red-500">{errors.migrationStatus.message}</p>}
+                            {errors.migrationStatus && <p className="mt-1 text-xs text-red-600">{errors.migrationStatus.message}</p>}
                         </div>
 
                         {/* Notes */}
                         <div>
                             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                            <textarea id="notes" {...register("notes")} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            <textarea id="notes" {...register("notes")} rows={3} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={updateWebsite.isLoading}
-                            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-                        >
-                            {updateWebsite.isLoading ? "Updating..." : "Update Website"}
-                        </button>
-                        <button
-                            type="button" // Important: type="button" to prevent form submission
-                            onClick={handleDelete}
-                            disabled={deleteWebsite.isPending}
-                            className="flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50"
-                        >
-                            {deleteWebsite.isPending ? "Deleting..." : "Delete Website"}
-                        </button>
+                        {/* Action Buttons for Website Form */}
+                        <div className="space-y-3 pt-2">
+                            <button
+                                type="submit"
+                                disabled={updateWebsite.isPending} // Corrected to isPending
+                                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                            >
+                                {updateWebsite.isPending ? "Updating..." : "Save Changes"}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteWebsite} // Use the correct handler
+                                disabled={deleteWebsite.isPending}
+                                className="flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50"
+                            >
+                                {deleteWebsite.isPending ? "Deleting..." : "Delete Website"}
+                            </button>
+                        </div>
                     </form>
                 )}
 
-                {/* Communication Logs Section */}
-                <div className="mt-10 w-full max-w-lg rounded bg-slate-100 p-6 shadow-md">
-                    <h2 className="mb-4 text-xl font-semibold">Communication Log</h2>
-                    {/* Form to Add New Communication Log */}
-                    <form
-                        onSubmit={handleSubmitCommLog(onCommLogSubmit)}
-                        className="mb-6 space-y-4 rounded border border-gray-200 bg-white p-4"
-                    >
-                        <div>
-                            <label
-                                htmlFor="commLogType"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Type
-                            </label>
-                            <select
-                                id="commLogType"
-                                {...registerCommLog("type")}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            >
-                                <option value="email">Email</option>
-                                <option value="chat">Chat</option>
-                                {/* Add other types if your enum changes */}
-                            </select>
-                            {commLogErrors.type && (
-                                <p className="mt-1 text-xs text-red-500">
-                                    {commLogErrors.type.message}
-                                </p>
-                            )}
-                        </div>
-                        <div>
-                            <label
-                                htmlFor="commLogMessage"
-                                className="block text-sm font-medium text-gray-700"
-                            >
-                                Message
-                            </label>
-                            <textarea
-                                id="commLogMessage"
-                                {...registerCommLog("message")}
-                                rows={3}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            />
-                            {commLogErrors.message && (
-                                <p className="mt-1 text-xs text-red-500">
-                                    {commLogErrors.message.message}
-                                </p>
-                            )}
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={createCommLog.isPending}
-                            className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50"
+                {/* Communication Logs Section - Render only if websiteData exists */}
+                {websiteData && (
+                    <div className="w-full max-w-lg rounded bg-slate-100 p-6 shadow-xl"> {/* Adjusted styles */}
+                        <h2 className="mb-4 text-xl font-semibold text-gray-800">
+                            Communication Log
+                        </h2>
+                        {/* Form to Add New Communication Log */}
+                        <form
+                            onSubmit={handleSubmitCommLog(onCommLogSubmit)}
+                            className="mb-6 space-y-4 rounded border border-gray-200 bg-white p-4"
                         >
-                            {createCommLog.isPending ? "Adding Log..." : "Add Log Entry"}
-                        </button>
-                    </form>
-                    {isLoadingCommLogs && <p>Loading communication logs...</p>}
-                    {isCommLogsError && <p className="text-red-500">Error loading communication logs: {commLogsError.message}</p>}
-                    {commLogs && commLogs.length === 0 && <p>No communication logs found for this website.</p>}
-                    {commLogs && commLogs.length > 0 && (
-                        <ul className="space-y-4">
-                            {commLogs.map((log) => (
-                                <li key={log.id} className="rounded-md border border-gray-300 bg-white p-4 shadow-sm">
-                                    <div className="mb-1 flex items-center justify-between">
-                                        <span className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
-                                            {log.type}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                            {new Date(log.createdAt).toLocaleDateString()} -{" "}
-                                            {new Date(log.createdAt).toLocaleTimeString()}
-                                        </span>
-                                    </div>
-                                    <p className="text-gray-700">{log.message}</p>
-                                    {log.user && ( // Display user info if available
-                                        <p className="mt-2 text-right text-xs text-gray-500">
-                                            Logged by: {log.user.name || "Unknown User"}
-                                        </p>
-                                    )}
-                                    {/* Add Edit/Delete buttons for individual logs later */}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
+                            <div>
+                                <label htmlFor="commLogType" className="block text-sm font-medium text-gray-700">Type</label>
+                                <select
+                                    id="commLogType"
+                                    {...registerCommLog("type")}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                >
+                                    <option value="email">Email</option>
+                                    <option value="chat">Chat</option>
+                                </select>
+                                {commLogErrors.type && (<p className="mt-1 text-xs text-red-500">{commLogErrors.type.message}</p>)}
+                            </div>
+                            <div>
+                                <label htmlFor="commLogMessage" className="block text-sm font-medium text-gray-700">Message</label>
+                                <textarea
+                                    id="commLogMessage"
+                                    {...registerCommLog("message")}
+                                    rows={3}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                />
+                                {commLogErrors.message && (<p className="mt-1 text-xs text-red-500">{commLogErrors.message.message}</p>)}
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={createCommLog.isPending}
+                                className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50"
+                            >
+                                {createCommLog.isPending ? "Adding Log..." : "Add Log Entry"}
+                            </button>
+                        </form>
+
+                        {/* Display existing logs */}
+                        {isLoadingCommLogs && <p className="text-center text-gray-600">Loading communication logs...</p>}
+                        {isCommLogsError && (<p className="text-center text-red-500">Error loading logs: {commLogsLoadingError?.message}</p>)}
+                        {commLogs && commLogs.length === 0 && !isLoadingCommLogs && !isCommLogsError && (<p className="text-center text-gray-600">No communication logs yet.</p>)}
+                        {commLogs && commLogs.length > 0 && (
+                            <ul className="space-y-4">
+                                {commLogs.map((log) => (
+                                    <li key={log.id} className="rounded-md border border-gray-300 bg-white p-4 shadow-sm">
+                                        <div className="mb-1 flex items-center justify-between">
+                                            <span className="text-sm font-semibold uppercase tracking-wide text-indigo-600">{log.type}</span>
+                                            <span className="text-xs text-gray-500">
+                                                {new Date(log.createdAt).toLocaleDateString()} -{" "}
+                                                {new Date(log.createdAt).toLocaleTimeString()}
+                                            </span>
+                                        </div>
+                                        <p className="whitespace-pre-wrap text-gray-700">{log.message}</p>
+                                        {log.user && (
+                                            <p className="mt-2 text-right text-xs text-gray-500">
+                                                Logged by: {log.user.name || "Unknown User"}
+                                            </p>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
             </main>
         </>
     );
