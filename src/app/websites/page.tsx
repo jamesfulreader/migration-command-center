@@ -41,10 +41,8 @@ const WebsitesIndexPage: NextPage = () => {
             <main className="container mx-auto flex min-h-screen flex-col p-4">
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-3xl font-bold text-white">Migration Websites</h1>
-                    <Link href="/websites/new" legacyBehavior>
-                        <a className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                            Add New Website
-                        </a>
+                    <Link href="/websites/new" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                        Add New Website
                     </Link>
                 </div>
 
@@ -70,8 +68,8 @@ const WebsitesIndexPage: NextPage = () => {
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.currentServer}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.targetServer}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                            <Link href={`/websites/${website.id}`} legacyBehavior>
-                                                <a className="text-indigo-600 hover:text-indigo-900">View/Edit</a>
+                                            <Link href={`/websites/${website.id}`} className="text-indigo-600 hover:text-indigo-900">
+                                                View/Edit
                                             </Link>
                                         </td>
                                     </tr>
