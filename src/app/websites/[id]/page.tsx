@@ -7,7 +7,7 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "~/trpc/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "~/server/api/root";
@@ -33,11 +33,26 @@ const commLogFormSchema = z.object({
 });
 type CommLogFormValues = z.infer<typeof commLogFormSchema>;
 
+type CommLogWithUser = {
+    id: string;
+    type: "email" | "chat";
+    message: string;
+    createdAt: Date;
+    user?: {
+        id: string;
+        name?: string;
+    } | null;
+    websiteId: string;
+};
+
 const EditWebsitePage: NextPage = () => {
     const router = useRouter();
     const params = useParams();
     const websiteId = params.id as string;
     const { data: session, status } = useSession();
+
+    // Edit communication log state
+    const [editingCommLog, setEditingCommLog] = useState<CommLogWithUser | null>(null);
 
     // Hooks for the main website form
     const {
@@ -56,6 +71,7 @@ const EditWebsitePage: NextPage = () => {
         handleSubmit: handleSubmitCommLog,
         reset: resetCommLogForm,
         formState: { errors: commLogErrors },
+        setValue: setCommLogValue,
     } = useForm<CommLogFormValues>({
         resolver: zodResolver(commLogFormSchema),
         defaultValues: {
@@ -105,6 +121,15 @@ const EditWebsitePage: NextPage = () => {
         }
     }, [websiteData, setValue]);
 
+    useEffect(() => {
+        if (editingCommLog) {
+            setCommLogValue("message", editingCommLog.message);
+            setCommLogValue("type", editingCommLog.type);
+        } else {
+            resetCommLogForm({ type: "email", message: "" });
+        }
+    }, [editingCommLog, setCommLogValue, resetCommLogForm]);
+
     // tRPC Mutations
     const updateWebsite = api.website.update.useMutation({
         onSuccess: () => {
@@ -141,6 +166,31 @@ const EditWebsitePage: NextPage = () => {
         },
     });
 
+    const updateCommLog = api.communicationLog.update.useMutation({
+        onSuccess: () => {
+            console.log("Communication log updated successfully!");
+            setEditingCommLog(null); // Reset editing state
+            resetCommLogForm();
+            void refetchCommLogs();
+        },
+        onError: (error: TRPCClientErrorLike<AppRouter>) => {
+            console.error("Failed to update communication log:", error.message);
+            alert(`Error updating log: ${error.message}`);
+        }
+    });
+
+    const deleteCommLog = api.communicationLog.delete.useMutation({
+        onSuccess: () => {
+            console.log("Communication log deleted successfully!");
+            setEditingCommLog(null); // Reset editing state
+            void refetchCommLogs();
+        },
+        onError: (error: TRPCClientErrorLike<AppRouter>) => {
+            console.error("Failed to delete communication log:", error.message);
+            alert(`Error deleting log: ${error.message}`);
+        }
+    });
+
     // --- END OF HOOKS SECTION ---
 
     // Event Handlers (defined after hooks)
@@ -163,10 +213,23 @@ const EditWebsitePage: NextPage = () => {
     };
 
     const onCommLogSubmit: SubmitHandler<CommLogFormValues> = (data) => {
-        createCommLog.mutate({
-            ...data,
-            websiteId: websiteId,
-        });
+        if (editingCommLog) {
+            // If editing an existing log, update it
+            updateCommLog.mutate({
+                id: editingCommLog.id,
+                ...data,
+            });
+        } else {
+            createCommLog.mutate({
+                ...data,
+                websiteId: websiteId,
+            });
+        }
+    };
+
+    const handleCancelEditCommLog = () => {
+        setEditingCommLog(null); // Reset editing state
+        resetCommLogForm(); // Reset the form
     };
 
     // Conditional returns for loading/auth states (NOW AFTER ALL HOOKS)
@@ -306,6 +369,9 @@ const EditWebsitePage: NextPage = () => {
                             onSubmit={handleSubmitCommLog(onCommLogSubmit)}
                             className="mb-6 space-y-4 rounded border border-gray-200 bg-white p-4"
                         >
+                            <h3 className="text-lg font-medium text-gray-900">
+                                {editingCommLog ? "Edit Log Entry" : "Add New Log Entry"}
+                            </h3>
                             <div>
                                 <label htmlFor="commLogType" className="block text-sm font-medium text-gray-700">Type</label>
                                 <select
@@ -328,13 +394,31 @@ const EditWebsitePage: NextPage = () => {
                                 />
                                 {commLogErrors.message && (<p className="mt-1 text-xs text-red-500">{commLogErrors.message.message}</p>)}
                             </div>
-                            <button
-                                type="submit"
-                                disabled={createCommLog.isPending}
-                                className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50"
-                            >
-                                {createCommLog.isPending ? "Adding Log..." : "Add Log Entry"}
-                            </button>
+                            <div className="flex space-x-3">
+                                <button
+                                    type="submit"
+                                    disabled={createCommLog.isPending || updateCommLog.isPending}
+                                    className="flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50"
+                                >
+                                    {editingCommLog
+                                        ? updateCommLog.isPending
+                                            ? "Updating..."
+                                            : "Update Log"
+                                        : createCommLog.isPending
+                                            ? "Adding..."
+                                            : "Add Log Entry"}
+                                </button>
+                                {editingCommLog && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEditCommLog}
+                                        className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                                        disabled={updateCommLog.isPending}
+                                    >
+                                        Cancel Edit
+                                    </button>
+                                )}
+                            </div>
                         </form>
 
                         {/* Display existing logs */}
@@ -358,6 +442,30 @@ const EditWebsitePage: NextPage = () => {
                                                 Logged by: {log.user.name ?? "Unknown User"}
                                             </p>
                                         )}
+                                        <div className="mt-3 flex justify-end space-x-2">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingCommLog(log);
+                                                    // Optionally scroll to the form:
+                                                    // document.getElementById('commLogMessage')?.focus();
+                                                }}
+                                                className="rounded bg-yellow-500 px-2 py-1 text-xs font-medium text-white hover:bg-yellow-600 disabled:opacity-50"
+                                                disabled={deleteCommLog.isPending || updateCommLog.isPending || createCommLog.isPending}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm("Are you sure you want to delete this log?")) {
+                                                        deleteCommLog.mutate({ id: log.id });
+                                                    }
+                                                }}
+                                                className="rounded bg-red-500 px-2 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                                                disabled={deleteCommLog.isPending || updateCommLog.isPending || createCommLog.isPending}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
