@@ -48,7 +48,7 @@ const WebsitesIndexPage: NextPage = () => {
                                 {websites.map((website) => (
                                     <tr key={website.id}>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{website.url}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.ownerName || "-"} ({website.ownerEmail || "-"})</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.ownerName ?? "-"} ({website.ownerEmail ?? "-"})</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.migrationStatus}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.currentServer}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.targetServer}</td>
