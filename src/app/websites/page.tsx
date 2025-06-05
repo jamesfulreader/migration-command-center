@@ -7,31 +7,16 @@ import Link from "next/link";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
 
+import LoadingSpinner from "~/app/_components/loadingspinner";
+
 const WebsitesIndexPage: NextPage = () => {
-    // const router = useRouter();
-    const { data: session, status: sessionStatus } = useSession();
+    const { status } = useSession();
     const { data: websites, isLoading, error } = api.website.getAll.useQuery(
         undefined,
         {
-            enabled: sessionStatus === "authenticated", // Only run query if user is authenticated
+            enabled: status === "authenticated", // Only run query if user is authenticated
         }
     );
-
-    // Route protection
-    if (status === "loading") {
-        return <p>Loading session...</p>;
-    }
-    if (status === "unauthenticated") {
-        // void router.push("/api/auth/signin");
-        return <p>Access Denied. Please sign in.</p>;
-    }
-
-    if (isLoading && status === "authenticated") {
-        return <p>Loading websites...</p>;
-    }
-    if (error) {
-        return <p>Error loading websites: {error.message}</p>;
-    }
 
     return (
         <>
@@ -78,7 +63,20 @@ const WebsitesIndexPage: NextPage = () => {
                         </table>
                     </div>
                 ) : (
-                    <p>No websites added yet. <Link href="/websites/new" className="text-indigo-600 hover:text-indigo-800">Add one now!</Link></p>
+                    isLoading ?
+                        <LoadingSpinner fullPage message="Loading websites..." />
+                        : error ?
+                            <p className="text-red-500">Error loading websites: {error.message}</p>
+                            :
+                            status === "authenticated" ?
+                                <p className="text-gray-500">No websites added yet. <Link href="/websites/new" className="text-indigo-600 hover:text-indigo-800">Add one now!</Link></p>
+                                :
+                                <div>
+                                    <p className="text-gray-500 mb-2">You need to be signed in to view websites.</p>
+                                    <Link href="/api/auth/signin" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                                        Sign in
+                                    </Link>
+                                </div>
                 )}
             </main>
         </>

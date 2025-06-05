@@ -11,7 +11,7 @@ interface LoadingProps {
     className?: string;
 }
 
-const Loading: FC<LoadingProps> = ({
+const LoadingSpinner: FC<LoadingProps> = ({
     message = "Loading...",
     fullPage = false,
     size = "medium",
@@ -44,4 +44,4 @@ const Loading: FC<LoadingProps> = ({
     );
 };
 
-export default Loading;
+export default LoadingSpinner;
