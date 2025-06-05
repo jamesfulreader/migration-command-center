@@ -55,14 +55,15 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
+    id                String             @id @default(cuid())
+    name              String?
+    email             String?            @unique
+    emailVerified     DateTime?
+    image             String?
+    accounts          Account[]
+    sessions          Session[]
+    posts             Post[]
+    communicationLogs CommunicationLog[] // Links to communication history
 }
 
 model VerificationToken {
@@ -95,6 +96,12 @@ model CommunicationLog {
     message   String   @db.Text
     type      String // e.g., "email", "phone", "note"
     createdAt DateTime @default(now())
-    website   Website  @relation(fields: [websiteId], references: [id])
+    updatedAt DateTime @updatedAt
+    website   Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
     websiteId String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId    String
+
+    @@index([websiteId])
+    @@index([userId])
 }
