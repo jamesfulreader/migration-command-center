@@ -1,4 +1,3 @@
-// src/pages/websites/index.tsx
 "use client";
 
 import { type NextPage } from "next";
@@ -8,6 +7,7 @@ import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
 
 import LoadingSpinner from "~/app/_components/loadingspinner";
+import { useEffect } from "react";
 
 const WebsitesIndexPage: NextPage = () => {
     const { status } = useSession();
@@ -15,6 +15,8 @@ const WebsitesIndexPage: NextPage = () => {
         undefined,
         {
             enabled: status === "authenticated", // Only run query if user is authenticated
+            refetchOnMount: true, // Refetch when the component mounts
+            refetchOnReconnect: true, // Refetch when the browser reconnects
         }
     );
 
@@ -24,10 +26,13 @@ const WebsitesIndexPage: NextPage = () => {
                 <title>Migration Websites</title>
             </Head>
             <main className="container mx-auto flex min-h-screen flex-col p-4">
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex gap-4">
                     <h1 className="text-3xl font-bold text-white">Migration Websites</h1>
                     <Link href="/websites/new" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                         Add New Website
+                    </Link>
+                    <Link href="/" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                        Go to Homepage
                     </Link>
                 </div>
 
@@ -72,10 +77,7 @@ const WebsitesIndexPage: NextPage = () => {
                                 <p className="text-gray-500">No websites added yet. <Link href="/websites/new" className="text-indigo-600 hover:text-indigo-800">Add one now!</Link></p>
                                 :
                                 <div>
-                                    <p className="text-gray-500 mb-2">You need to be signed in to view websites.</p>
-                                    <Link href="/api/auth/signin" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
-                                        Sign in
-                                    </Link>
+                                    <p className="text-gray-200 mb-2 underline">You need to be signed in to view websites.</p>
                                 </div>
                 )}
             </main>

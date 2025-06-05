@@ -29,6 +29,7 @@ type WebsiteFormValues = z.infer<typeof websiteFormSchema>;
 const NewWebsitePage: NextPage = () => {
     const router = useRouter();
     const { data: session, status: sessionStatus } = useSession(); // Renamed status to avoid conflict
+    const utils = api.useUtils();
 
     const {
         register,
@@ -42,6 +43,7 @@ const NewWebsitePage: NextPage = () => {
     const createWebsite = api.website.create.useMutation({
         onSuccess: () => {
             console.log("Website created successfully");
+            void utils.website.getAll.invalidate();
             reset();
             void router.push("/websites");
         },
