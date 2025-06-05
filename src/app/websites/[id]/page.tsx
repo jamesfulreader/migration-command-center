@@ -278,7 +278,7 @@ const EditWebsitePage: NextPage = () => {
 
                 {/* Main Website Edit Form */}
                 {websiteData && ( // Only render form if websiteData is available
-                    <form
+                    (<form
                         onSubmit={handleSubmit(onWebsiteSubmit)} // Use the correct submit handler
                         className="mb-10 w-full max-w-lg space-y-4 rounded bg-slate-200/90 p-8 shadow-xl" // Adjusted styles
                     >
@@ -288,34 +288,29 @@ const EditWebsitePage: NextPage = () => {
                             <input id="url" {...register("url")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             {errors.url && <p className="mt-1 text-xs text-red-600">{errors.url.message}</p>}
                         </div>
-
                         {/* Owner Name */}
                         <div>
                             <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">Owner Name</label>
                             <input id="ownerName" {...register("ownerName")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                         </div>
-
                         {/* Owner Email */}
                         <div>
                             <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700">Owner Email</label>
                             <input id="ownerEmail" type="email" {...register("ownerEmail")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             {errors.ownerEmail && <p className="mt-1 text-xs text-red-600">{errors.ownerEmail.message}</p>}
                         </div>
-
                         {/* Current Server */}
                         <div>
                             <label htmlFor="currentServer" className="block text-sm font-medium text-gray-700">Current Server</label>
                             <input id="currentServer" {...register("currentServer")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             {errors.currentServer && <p className="mt-1 text-xs text-red-600">{errors.currentServer.message}</p>}
                         </div>
-
                         {/* Target Server */}
                         <div>
                             <label htmlFor="targetServer" className="block text-sm font-medium text-gray-700">Target Server</label>
                             <input id="targetServer" {...register("targetServer")} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             {errors.targetServer && <p className="mt-1 text-xs text-red-600">{errors.targetServer.message}</p>}
                         </div>
-
                         {/* Migration Status */}
                         <div>
                             <label htmlFor="migrationStatus" className="block text-sm font-medium text-gray-700">Migration Status</label>
@@ -325,18 +320,16 @@ const EditWebsitePage: NextPage = () => {
                                 className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             >
                                 {migrationStatuses.map(statusVal => ( // Renamed 'status' to 'statusVal' to avoid conflict
-                                    <option key={statusVal} value={statusVal}>{statusVal}</option>
+                                    (<option key={statusVal} value={statusVal}>{statusVal}</option>)
                                 ))}
                             </select>
                             {errors.migrationStatus && <p className="mt-1 text-xs text-red-600">{errors.migrationStatus.message}</p>}
                         </div>
-
                         {/* Notes */}
                         <div>
                             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
                             <textarea id="notes" {...register("notes")} rows={3} className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                         </div>
-
                         {/* Action Buttons for Website Form */}
                         <div className="space-y-3 pt-2">
                             <button
@@ -355,7 +348,7 @@ const EditWebsitePage: NextPage = () => {
                                 {deleteWebsite.isPending ? "Deleting..." : "Delete Website"}
                             </button>
                         </div>
-                    </form>
+                    </form>)
                 )}
 
                 {/* Communication Logs Section - Render only if websiteData exists */}
@@ -445,9 +438,16 @@ const EditWebsitePage: NextPage = () => {
                                         <div className="mt-3 flex justify-end space-x-2">
                                             <button
                                                 onClick={() => {
-                                                    setEditingCommLog(log);
-                                                    // Optionally scroll to the form:
-                                                    // document.getElementById('commLogMessage')?.focus();
+                                                    setEditingCommLog({
+                                                        ...log,
+                                                        type: log.type as "email" | "chat",
+                                                        user: log.user
+                                                            ? {
+                                                                ...log.user,
+                                                                name: log.user.name ?? undefined,
+                                                            }
+                                                            : undefined,
+                                                    });
                                                 }}
                                                 className="rounded bg-yellow-500 px-2 py-1 text-xs font-medium text-white hover:bg-yellow-600 disabled:opacity-50"
                                                 disabled={deleteCommLog.isPending || updateCommLog.isPending || createCommLog.isPending}
