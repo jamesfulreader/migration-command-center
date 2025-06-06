@@ -7,7 +7,6 @@ import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
 
 import LoadingSpinner from "~/app/_components/loadingspinner";
-import { useEffect } from "react";
 
 const WebsitesIndexPage: NextPage = () => {
     const { status } = useSession();

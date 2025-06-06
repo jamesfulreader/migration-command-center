@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "~/server/api/root";
+import LoadingSpinner from "~/app/_components/loadingspinner";
 
 const websiteFormSchema = z.object({
     url: z.string().url({ message: "Invalid URL format" }),
@@ -71,10 +72,10 @@ const NewWebsitePage: NextPage = () => {
     };
 
     if (sessionStatus === "loading") {
-        return <div>Loading...</div>;
+        return <LoadingSpinner message="Loading Form" fullPage />;
     }
     if (!session) {
-        return <p>Please sign in to add a new website.</p>;
+        return <p className="text-gray-200 mb-2 underline">You need to be signed in to view websites.</p>;
     }
 
     const migrationStatuses = [
