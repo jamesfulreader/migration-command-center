@@ -1,4 +1,3 @@
-// src/pages/websites/index.tsx
 "use client";
 
 import { type NextPage } from "next";
@@ -7,31 +6,18 @@ import Link from "next/link";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
 
+import LoadingSpinner from "~/app/_components/loadingspinner";
+
 const WebsitesIndexPage: NextPage = () => {
-    // const router = useRouter();
-    const { data: session, status: sessionStatus } = useSession();
+    const { status } = useSession();
     const { data: websites, isLoading, error } = api.website.getAll.useQuery(
         undefined,
         {
-            enabled: sessionStatus === "authenticated", // Only run query if user is authenticated
+            enabled: status === "authenticated", // Only run query if user is authenticated
+            refetchOnMount: true, // Refetch when the component mounts
+            refetchOnReconnect: true, // Refetch when the browser reconnects
         }
     );
-
-    // Route protection
-    if (status === "loading") {
-        return <p>Loading session...</p>;
-    }
-    if (status === "unauthenticated") {
-        // void router.push("/api/auth/signin");
-        return <p>Access Denied. Please sign in.</p>;
-    }
-
-    if (isLoading && status === "authenticated") {
-        return <p>Loading websites...</p>;
-    }
-    if (error) {
-        return <p>Error loading websites: {error.message}</p>;
-    }
 
     return (
         <>
@@ -39,10 +25,13 @@ const WebsitesIndexPage: NextPage = () => {
                 <title>Migration Websites</title>
             </Head>
             <main className="container mx-auto flex min-h-screen flex-col p-4">
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex gap-4">
                     <h1 className="text-3xl font-bold text-white">Migration Websites</h1>
                     <Link href="/websites/new" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                         Add New Website
+                    </Link>
+                    <Link href="/" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                        Go to Homepage
                     </Link>
                 </div>
 
@@ -63,7 +52,7 @@ const WebsitesIndexPage: NextPage = () => {
                                 {websites.map((website) => (
                                     <tr key={website.id}>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{website.url}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.ownerName || "-"} ({website.ownerEmail || "-"})</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.ownerName ?? "-"} ({website.ownerEmail ?? "-"})</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.migrationStatus}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.currentServer}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{website.targetServer}</td>
@@ -78,7 +67,17 @@ const WebsitesIndexPage: NextPage = () => {
                         </table>
                     </div>
                 ) : (
-                    <p>No websites added yet. <Link href="/websites/new" className="text-indigo-600 hover:text-indigo-800">Add one now!</Link></p>
+                    isLoading ?
+                        <LoadingSpinner fullPage message="Loading websites..." />
+                        : error ?
+                            <p className="text-red-500">Error loading websites: {error.message}</p>
+                            :
+                            status === "authenticated" ?
+                                <p className="text-gray-500">No websites added yet. <Link href="/websites/new" className="text-indigo-600 hover:text-indigo-800">Add one now!</Link></p>
+                                :
+                                <div>
+                                    <p className="text-gray-200 mb-2 underline">You need to be signed in to view websites.</p>
+                                </div>
                 )}
             </main>
         </>

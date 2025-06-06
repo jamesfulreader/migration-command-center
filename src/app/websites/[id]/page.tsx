@@ -12,6 +12,8 @@ import { useSession } from "next-auth/react";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "~/server/api/root";
 
+import LoadingSpinner from "~/app/_components/loadingspinner";
+
 const websiteFormSchema = z.object({
     url: z.string().url({ message: "Must be a valid URL" }),
     ownerName: z.string().optional(),
@@ -49,7 +51,8 @@ const EditWebsitePage: NextPage = () => {
     const router = useRouter();
     const params = useParams();
     const websiteId = params.id as string;
-    const { data: session, status } = useSession();
+    const { status } = useSession();
+    const utils = api.useUtils();
 
     // Edit communication log state
     const [editingCommLog, setEditingCommLog] = useState<CommLogWithUser | null>(null);
@@ -84,8 +87,6 @@ const EditWebsitePage: NextPage = () => {
     const {
         data: websiteData,
         isLoading: isLoadingWebsite,
-        isError: isErrorLoadingWebsite, // Added for completeness
-        error: websiteLoadingError, // Added for completeness
     } = api.website.getById.useQuery(
         { id: websiteId },
         {
@@ -134,6 +135,7 @@ const EditWebsitePage: NextPage = () => {
     const updateWebsite = api.website.update.useMutation({
         onSuccess: () => {
             console.log("Website updated successfully!");
+            void utils.website.getAll.invalidate(); // Invalidate the cache for website list
             void router.push("/websites");
         },
         onError: (error) => {
@@ -145,6 +147,7 @@ const EditWebsitePage: NextPage = () => {
     const deleteWebsite = api.website.delete.useMutation({
         onSuccess: () => {
             console.log("Website deleted successfully!");
+            void utils.website.getAll.invalidate(); // Invalidate the cache for website list
             resetWebsiteForm(); // Also reset main form if website is deleted
             void router.push("/websites");
         },
@@ -234,16 +237,16 @@ const EditWebsitePage: NextPage = () => {
 
     // Conditional returns for loading/auth states (NOW AFTER ALL HOOKS)
     if (status === "loading") {
-        return <div className="flex min-h-screen items-center justify-center"><p>Loading session...</p></div>;
+        return <LoadingSpinner message="Loading Website . . . " fullPage />;
     }
     if (status === "unauthenticated") {
         // Consider redirecting or a more robust auth boundary
         router.push("/api/auth/signin");
-        return <div className="flex min-h-screen items-center justify-center"><p>Redirecting to sign in...</p></div>;
+        return <LoadingSpinner message="Redirecting to sign in..." fullPage />;
     }
     // This check should ideally be after session is confirmed authenticated
     if (isLoadingWebsite && status === "authenticated") {
-        return <div className="flex min-h-screen items-center justify-center"><p>Loading website data...</p></div>;
+        return <LoadingSpinner message="Loading website data..." fullPage />;
     }
     // If websiteData is explicitly not found after trying to load
     if (!websiteData && !isLoadingWebsite && status === "authenticated") {
@@ -257,7 +260,6 @@ const EditWebsitePage: NextPage = () => {
             </div>
         );
     }
-
 
     const migrationStatuses = [
         "Pending Outreach", "Outreach Sent", "Awaiting Reply",
@@ -335,7 +337,7 @@ const EditWebsitePage: NextPage = () => {
                             <button
                                 type="submit"
                                 disabled={updateWebsite.isPending} // Corrected to isPending
-                                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+                                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
                             >
                                 {updateWebsite.isPending ? "Updating..." : "Save Changes"}
                             </button>
@@ -343,7 +345,7 @@ const EditWebsitePage: NextPage = () => {
                                 type="button"
                                 onClick={handleDeleteWebsite} // Use the correct handler
                                 disabled={deleteWebsite.isPending}
-                                className="flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50"
+                                className="flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50"
                             >
                                 {deleteWebsite.isPending ? "Deleting..." : "Delete Website"}
                             </button>
