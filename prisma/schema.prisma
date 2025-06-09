@@ -92,3 +92,11 @@ model CommunicationLog {
     @@index([websiteId])
     @@index([userId])
 }
+
+model RequestLog {
+    id         BigInt   @id @default(autoincrement())
+    identifier String
+    timestamp  DateTime @default(now()) @db.Timestamptz(6)
+
+    @@index([identifier, timestamp])
+}
