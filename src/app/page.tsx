@@ -2,10 +2,14 @@ import Link from "next/link";
 
 import { auth } from "~/server/auth";
 import { HydrateClient, api } from "~/trpc/server";
+import { StatusChartJS } from "~/app/_components/StatusChartJS";
 
 export default async function Home() {
   const session = await auth();
-  const metrics = await api.website.getMetrics();
+  const [metrics, statusCounts] = await Promise.all([
+    api.website.getMetrics(),
+    api.website.getStatusCounts(),
+  ])
 
   return (
     <HydrateClient>
@@ -37,6 +41,8 @@ export default async function Home() {
               <p className="mt-2 text-lg">Websites Done</p>
             </div>
           </div>
+
+          <StatusChartJS data={statusCounts} />
 
           {session && <div className="flex flex-col items-center justify-center gap-4">
             <Link href="/websites/new" className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20">

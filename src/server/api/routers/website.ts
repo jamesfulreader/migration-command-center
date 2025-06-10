@@ -104,4 +104,17 @@ export const websiteRouter = createTRPCRouter({
             completedCount,
         };
     }),
+
+    getStatusCounts: publicProcedure.query(async ({ ctx }) => {
+        const statusCounts = await ctx.db.website.groupBy({
+            by: ["migrationStatus"],
+            _count: {
+                migrationStatus: true,
+            },
+        });
+        return statusCounts.map((item) => ({
+            name: item.migrationStatus,
+            value: item._count.migrationStatus,
+        }));
+    }),
 })
