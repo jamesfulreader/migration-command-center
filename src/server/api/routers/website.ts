@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
     createTRPCRouter,
     protectedProcedure,
+    publicProcedure,
 } from "~/server/api/trpc";
 
 export const websiteRouter = createTRPCRouter({
@@ -79,4 +80,28 @@ export const websiteRouter = createTRPCRouter({
             });
         }
         ),
+    // Metrics
+    getMetrics: publicProcedure.query(async ({ ctx }) => {
+        const [inProgressCount, completedCount] = await Promise.all([
+            // Count all websites that are NOT 'Complete'
+            ctx.db.website.count({
+                where: {
+                    migrationStatus: {
+                        not: "Complete",
+                    },
+                },
+            }),
+            // Count all websites that ARE 'Complete'
+            ctx.db.website.count({
+                where: {
+                    migrationStatus: "Complete",
+                },
+            }),
+        ]);
+
+        return {
+            inProgressCount,
+            completedCount,
+        };
+    }),
 })
