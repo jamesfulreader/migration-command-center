@@ -1,10 +1,15 @@
 import Link from "next/link";
 
 import { auth } from "~/server/auth";
-import { HydrateClient } from "~/trpc/server";
+import { HydrateClient, api } from "~/trpc/server";
+import { StatusChartJS } from "~/app/_components/StatusChartJS";
 
 export default async function Home() {
   const session = await auth();
+  const [metrics, statusCounts] = await Promise.all([
+    api.website.getMetrics(),
+    api.website.getStatusCounts(),
+  ])
 
   return (
     <HydrateClient>
@@ -21,16 +26,33 @@ export default async function Home() {
               {session ? "Sign out" : "Sign in"}
             </Link>
           </div>
+          {/* metrics data */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-white/10 p-6">
+              <span className="text-5xl font-extrabold tracking-tight">
+                {metrics.inProgressCount}
+              </span>
+              <p className="mt-2 text-lg">Websites in Progress</p>
+            </div>
+            <div className="flex flex-col items-center justify-center rounded-xl bg-white/10 p-6">
+              <span className="text-5xl font-extrabold tracking-tight">
+                {metrics.completedCount}
+              </span>
+              <p className="mt-2 text-lg">Websites Done</p>
+            </div>
+          </div>
 
-          <div className="flex flex-col items-center justify-center gap-4">
+          <StatusChartJS data={statusCounts} />
+
+          {session && <div className="flex flex-col items-center justify-center gap-4">
             <Link href="/websites/new" className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20">
               Create New Website
             </Link>
             <Link href="/websites" className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20">
               Manage Websites
             </Link>
+          </div>}
 
-          </div>
         </div>
       </main>
     </HydrateClient >
